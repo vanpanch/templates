@@ -5,10 +5,6 @@ import "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
-/**
- * @title EVMAuthAccessControl
- * @dev Extension of OpenZeppelin's AccessControlDefaultAdminRules contract that adds blacklist functionality
- */
 abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
     // Roles
     bytes32 public constant BLACKLIST_MANAGER_ROLE =
@@ -32,11 +28,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         _;
     }
 
-    /**
-     * @dev Constructor
-     * @param _delay Delay (in seconds) for transfer of contract ownership
-     * @param _owner Address of the contract owner
-     */
     constructor(
         uint48 _delay,
         address _owner
@@ -44,10 +35,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         _grantRole(BLACKLIST_MANAGER_ROLE, _owner);
     }
 
-    /**
-     * @dev Add a account to the blacklist; cannot blacklist a blacklist manager or the zero address
-     * @param account The address of the account to blacklist
-     */
     function addToBlacklist(
         address account
     ) external onlyRole(BLACKLIST_MANAGER_ROLE) {
@@ -62,10 +49,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         emit AddedToBlacklist(account);
     }
 
-    /**
-     * @dev Add a batch of accounts to the blacklist
-     * @param accounts The addresses of the accounts to blacklist
-     */
     function addBatchToBlacklist(
         address[] memory accounts
     ) external onlyRole(BLACKLIST_MANAGER_ROLE) {
@@ -74,11 +57,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         }
     }
 
-    /**
-     * @dev Grant multiple roles to an account
-     * @param roles Array of role identifiers to grant
-     * @param account The address to grant the roles to
-     */
     function grantRoles(
         bytes32[] memory roles,
         address account
@@ -91,11 +69,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         }
     }
 
-    /**
-     * @dev Check if a account is blacklisted; if no account is provided, check if the sender is blacklisted
-     * @param account The address of the account to check
-     * @return True if the account is blacklisted, false otherwise
-     */
     function isBlacklisted(address account) public view returns (bool) {
         if (account == address(0)) {
             return _blacklisted[_msgSender()];
@@ -103,10 +76,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         return _blacklisted[account];
     }
 
-    /**
-     * @dev Remove a account from the blacklist
-     * @param account The address of the account to remove from the blacklist
-     */
     function removeFromBlacklist(
         address account
     ) external onlyRole(BLACKLIST_MANAGER_ROLE) {
@@ -115,10 +84,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         emit RemovedFromBlacklist(account);
     }
 
-    /**
-     * @dev Remove a batch of accounts from the blacklist
-     * @param accounts The addresses of the accounts to remove from the blacklist
-     */
     function removeBatchFromBlacklist(
         address[] memory accounts
     ) external onlyRole(BLACKLIST_MANAGER_ROLE) {
@@ -127,11 +92,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
         }
     }
 
-    /**
-     * @dev Revoke multiple roles from an account
-     * @param roles Array of role identifiers to revoke
-     * @param account The address to revoke the roles from
-     */
     function revokeRoles(
         bytes32[] memory roles,
         address account
@@ -145,11 +105,6 @@ abstract contract EVMAuthAccessControl is AccessControlDefaultAdminRules {
     }
 }
 
-/**
- * @title EVMAuthBaseERC1155
- * @dev Extension of OpenZeppelin's ERC-1155 contract that adds support for blacklisting, fund withdrawal,
- *      and token management functionality.
- */
 abstract contract EVMAuthBaseERC1155 is
     ERC1155,
     EVMAuthAccessControl,
@@ -178,14 +133,6 @@ abstract contract EVMAuthBaseERC1155 is
     // Auto-incrementing token ID
     uint256 internal nextTokenId = 0;
 
-    /**
-     * @dev Constructor
-     * @param _name Name identifier for the project
-     * @param _version Version identifier for the project
-     * @param _uri URI for ERC-1155 token metadata (e.g., "https://example.com/token/{id}.json")
-     * @param _delay Delay (in seconds) for transfer of contract ownership
-     * @param _owner Address of the contract owner
-     */
     constructor(
         string memory _name,
         string memory _version,
@@ -202,30 +149,16 @@ abstract contract EVMAuthBaseERC1155 is
         _grantRole(TOKEN_BURNER_ROLE, _owner);
     }
 
-    /**
-     * @dev Check if a token is active
-     * @param id The ID of the token to check
-     * @return True if the token is active, false otherwise
-     */
     function active(uint256 id) public view returns (bool) {
         return _metadata[id].active;
     }
 
-    /**
-     * @dev Get the metadata of a token
-     * @param id The ID of the token to check
-     * @return The metadata of the token
-     */
     function baseMetadataOf(
         uint256 id
     ) public view returns (BaseMetadata memory) {
         return _metadata[id];
     }
 
-    /**
-     * @dev Get the metadata of all tokens
-     * @return result The metadata of all tokens
-     */
     function baseMetadataOfAll() public view returns (BaseMetadata[] memory) {
         BaseMetadata[] memory result = new BaseMetadata[](nextTokenId);
         for (uint256 i = 0; i < nextTokenId; i++) {
@@ -234,11 +167,6 @@ abstract contract EVMAuthBaseERC1155 is
         return result;
     }
 
-    /**
-     * @dev Get the metadata of a batch of tokens
-     * @param ids The IDs of the tokens to check
-     * @return result The metadata of the tokens
-     */
     function baseMetadataOfBatch(
         uint256[] memory ids
     ) public view returns (BaseMetadata[] memory) {
@@ -249,12 +177,6 @@ abstract contract EVMAuthBaseERC1155 is
         return result;
     }
 
-    /**
-     * @dev Burn a token from an address; token must be burnable
-     * @param from Address to burn tokens from
-     * @param id Token ID to burn
-     * @param amount Amount of tokens to burn
-     */
     function burn(address from, uint256 id, uint256 amount) external {
         require(
             hasRole(TOKEN_BURNER_ROLE, _msgSender()),
@@ -263,21 +185,10 @@ abstract contract EVMAuthBaseERC1155 is
         _burn(from, id, amount);
     }
 
-    /**
-     * @dev Check if a token is burnable
-     * @param id The ID of the token to check
-     * @return True if the token is burnable, false otherwise
-     */
     function burnable(uint256 id) public view returns (bool) {
         return _metadata[id].burnable;
     }
 
-    /**
-     * @dev Burn a batch of tokens from an address; tokens must be burnable
-     * @param from Address to burn tokens from
-     * @param ids Array of token IDs to burn
-     * @param amounts Array of amounts to burn
-     */
     function burnBatch(
         address from,
         uint256[] memory ids,
@@ -290,9 +201,6 @@ abstract contract EVMAuthBaseERC1155 is
         _burnBatch(from, ids, amounts);
     }
 
-    /**
-     * @dev Override to return false for blacklisted accounts
-     */
     function isApprovedForAll(
         address account,
         address operator
@@ -303,13 +211,6 @@ abstract contract EVMAuthBaseERC1155 is
         return super.isApprovedForAll(account, operator);
     }
 
-    /**
-     * @dev Mint a new token and issue it to an address; token must be active
-     * @param to Address to mint tokens to
-     * @param id Token ID to mint
-     * @param amount Amount of tokens to mint
-     * @param data Additional data
-     */
     function issue(
         address to,
         uint256 id,
@@ -323,13 +224,6 @@ abstract contract EVMAuthBaseERC1155 is
         _mint(to, id, amount, data);
     }
 
-    /**
-     * @dev Mint a batch of tokens and issue them to an address; tokens must be active
-     * @param to Address to mint tokens to
-     * @param ids Array of token IDs to mint
-     * @param amounts Array of amounts to mint
-     * @param data Additional data
-     */
     function issueBatch(
         address to,
         uint256[] memory ids,
@@ -343,18 +237,10 @@ abstract contract EVMAuthBaseERC1155 is
         _mintBatch(to, ids, amounts, data);
     }
 
-    /**
-     * @dev Check if a token is transferable
-     * @param id The ID of the token to check
-     * @return True if the token is transferable, false otherwise
-     */
     function transferable(uint256 id) public view returns (bool) {
         return _metadata[id].transferable;
     }
 
-    /**
-     * @dev Override to deny blacklisted accounts
-     */
     function safeTransferFrom(
         address from,
         address to,
@@ -365,9 +251,6 @@ abstract contract EVMAuthBaseERC1155 is
         super.safeTransferFrom(from, to, id, value, data);
     }
 
-    /**
-     * @dev Override to deny blacklisted accounts
-     */
     function safeBatchTransferFrom(
         address from,
         address to,
@@ -378,9 +261,6 @@ abstract contract EVMAuthBaseERC1155 is
         super.safeBatchTransferFrom(from, to, ids, values, data);
     }
 
-    /**
-     * @dev Override to deny blacklisted accounts
-     */
     function setApprovalForAll(
         address operator,
         bool approved
@@ -388,13 +268,6 @@ abstract contract EVMAuthBaseERC1155 is
         super.setApprovalForAll(operator, approved);
     }
 
-    /**
-     * @dev Set the base metadata for a token
-     * @param id The ID of the token
-     * @param _active Whether the token is active
-     * @param _burnable Whether the token is burnable
-     * @param _transferable Whether the token is transferable
-     */
     function setBaseMetadata(
         uint256 id,
         bool _active,
@@ -414,9 +287,6 @@ abstract contract EVMAuthBaseERC1155 is
         }
     }
 
-    /**
-     * @dev Override to declare support for interfaces
-     */
     function supportsInterface(
         bytes4 interfaceId
     )
@@ -429,9 +299,6 @@ abstract contract EVMAuthBaseERC1155 is
         return super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @dev Override to deny blacklisted accounts when minting, burning, or transferring tokens
-     */
     function _update(
         address from,
         address to,
@@ -465,10 +332,6 @@ abstract contract EVMAuthBaseERC1155 is
     }
 }
 
-/**
- * @title EVMAuthPurchasableERC1155
- * @dev Extension of the EVMAuthBaseERC1155 contract that enables the direct purchase and price management of tokens
- */
 abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
     // Wallet address for receiving payments
     address public wallet;
@@ -507,14 +370,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         _;
     }
 
-    /**
-     * @dev Constructor
-     * @param _name Name of the EIP-712 signing domain
-     * @param _version Current major version of the EIP-712 signing domain
-     * @param _uri URI for ERC-1155 token metadata
-     * @param _delay Delay (in seconds) for transfer of contract ownership
-     * @param _owner Address of the contract owner
-     */
     constructor(
         string memory _name,
         string memory _version,
@@ -529,28 +384,14 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         wallet = _owner;
     }
 
-    /**
-     * @dev Check if a token is active and has a price greater than 0
-     * @param id The ID of the token to check
-     * @return True if the token is purchasable, false otherwise
-     */
     function forSale(uint256 id) public view returns (bool) {
         return active(id) && _prices[id] > 0;
     }
 
-    /**
-     * @dev Get the price of a token
-     * @param id The ID of the token to check
-     * @return The price of the token
-     */
     function priceOf(uint256 id) public view returns (uint256) {
         return _prices[id];
     }
 
-    /**
-     * @dev Get the price of all tokens
-     * @return result The prices of all tokens
-     */
     function priceOfAll() public view returns (uint256[] memory result) {
         result = new uint256[](nextTokenId);
         for (uint256 i = 0; i < nextTokenId; i++) {
@@ -559,11 +400,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         return result;
     }
 
-    /**
-     * @dev Get the purchasing metadata for a batch of tokens
-     * @param ids The IDs of the tokens to check
-     * @return result The purchasing metadata for the tokens
-     */
     function priceOfBatch(
         uint256[] memory ids
     ) public view returns (uint256[] memory result) {
@@ -574,11 +410,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         return result;
     }
 
-    /**
-     * @dev Purchase a token for a specific account
-     * @param id The ID of the token to purchase
-     * @param amount The amount of tokens to purchase
-     */
     function purchase(
         address account,
         uint256 id,
@@ -616,11 +447,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         emit TokenPurchased(account, id, amount);
     }
 
-    /**
-     * @dev Set the price for a token
-     * @param id The ID of the token to set the price for
-     * @param price The price of the token
-     */
     function setPriceOf(
         uint256 id,
         uint256 price
@@ -632,11 +458,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         _prices[id] = price;
     }
 
-    /**
-     * @dev Set the price for a batch of tokens
-     * @param ids The IDs of the tokens to set the price for
-     * @param prices The prices of the tokens
-     */
     function setPriceOfBatch(
         uint256[] memory ids,
         uint256[] memory prices
@@ -651,10 +472,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         }
     }
 
-    /**
-     * @dev Set the wallet address for receiving payments
-     * @param value The new wallet address
-     */
     function setWallet(address value) external requireValidWallet(value) {
         require(
             hasRole(FINANCE_MANAGER_ROLE, _msgSender()),
@@ -665,9 +482,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
         emit WalletChanged(oldWallet, value);
     }
 
-    /**
-     * @dev Move balance from this contract to wallet address
-     */
     function withdraw()
         external
         payable
@@ -688,10 +502,6 @@ abstract contract EVMAuthPurchasableERC1155 is EVMAuthBaseERC1155 {
     }
 }
 
-/**
- * @title EVMAuthExpiringERC1155
- * @dev Extension of the EVMAuthPurchasableERC1155 contract that adds expiration logic and management to tokens
- */
 abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
     // Batch of tokens that expire at the same time
     struct Group {
@@ -712,14 +522,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         uint256 amount
     );
 
-    /**
-     * @dev Constructor
-     * @param _name Name of the EIP-712 signing domain
-     * @param _version Current major version of the EIP-712 signing domain
-     * @param _uri URI for ERC-1155 token metadata
-     * @param _delay Delay (in seconds) for transfer of contract ownership
-     * @param _owner Address of the contract owner
-     */
     constructor(
         string memory _name,
         string memory _version,
@@ -728,9 +530,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         address _owner
     ) EVMAuthPurchasableERC1155(_name, _version, _uri, _delay, _owner) {}
 
-    /**
-     * @dev Override to exclude expired tokens
-     */
     function balanceOf(
         address account,
         uint256 id
@@ -749,11 +548,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return netBalance;
     }
 
-    /**
-     * @dev Get the balance of all tokens for a given account
-     * @param account The address to check
-     * @return Array of balances for each token ID
-     */
     function balanceOfAll(
         address account
     ) public view returns (uint256[] memory) {
@@ -764,9 +558,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return balances;
     }
 
-    /**
-     * @dev Override to exclude expired tokens
-     */
     function balanceOfBatch(
         address[] memory accounts,
         uint256[] memory ids
@@ -781,12 +572,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return batchBalances;
     }
 
-    /**
-     * @dev Get expiration details of token holdings for an account
-     * @param account The address to check
-     * @param id The token ID to check
-     * @return Array of Group structs, with amount and expiration of each batch
-     */
     function balanceDetailsOf(
         address account,
         uint256 id
@@ -794,11 +579,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return _validGroups(account, id);
     }
 
-    /**
-     * @dev Get expiration details of token holdings for all tokens of an account
-     * @param account The address to check
-     * @return Array of Group arrays, with amount and expiration of each batch for each token ID
-     */
     function balanceDetailsOfAll(
         address account
     ) external view returns (Group[][] memory) {
@@ -809,12 +589,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return result;
     }
 
-    /**
-     * @dev Get expiration details of token holdings for multiple accounts
-     * @param accounts Array of addresses to check
-     * @param ids Array of token IDs to check
-     * @return result Array of Group arrays, with amount and expiration of each batch for each account
-     */
     function balanceDetailsOfBatch(
         address[] calldata accounts,
         uint256[] calldata ids
@@ -829,12 +603,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return result;
     }
 
-    /**
-     * @dev Adjust the token group balances in first-in-first-out (FIFO) order (earliest expiration first)
-     * @param account The address of the account
-     * @param id The ID of the token
-     * @param amount The amount of tokens to burn
-     */
     function _burnGroupBalances(
         address account,
         uint256 id,
@@ -864,20 +632,10 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         }
     }
 
-    /**
-     * @dev Generate the expiration timestamp for a token ID
-     * @param id The ID of the token
-     * @return The expiration timestamp (in seconds) for the token
-     */
     function expirationFor(uint256 id) public view returns (uint256) {
         return ttlOf(id) == 0 ? type(uint256).max : block.timestamp + ttlOf(id);
     }
 
-    /**
-     * @dev Delete token groups that are expired or have no balance
-     * @param account The address whose token groups need pruning
-     * @param id The ID of the token
-     */
     function _pruneGroups(address account, uint256 id) internal {
         Group[] storage groups = _group[account][id];
         uint256 _now = block.timestamp;
@@ -908,13 +666,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         }
     }
 
-    /**
-     * @dev Transfer token groups from one account to another
-     * @param from The source address
-     * @param to The destination address
-     * @param id The ID of the token
-     * @param amount The amount of tokens to transfer
-     */
     function _transferGroups(
         address from,
         address to,
@@ -952,11 +703,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         _pruneGroups(from, id);
     }
 
-    /**
-     * @dev Set the time-to-live (TTL) for a token
-     * @param id The ID of the token
-     * @param value The TTL (in seconds) for the token; set to 0 (default) for perpetual tokens
-     */
     function setTTL(uint256 id, uint256 value) public {
         require(
             hasRole(TOKEN_MANAGER_ROLE, _msgSender()),
@@ -966,19 +712,10 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         _ttls[id] = value;
     }
 
-    /**
-     * @dev Get the time-to-live (TTL) for a token
-     * @param id The ID of the token
-     * @return The TTL (in seconds) for the token
-     */
     function ttlOf(uint256 id) public view returns (uint256) {
         return _ttls[id];
     }
 
-    /**
-     * @dev Get the time-to-live (TTL) for all tokens
-     * @return result The TTL (in seconds) for each token
-     */
     function ttlOfAll() public view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](nextTokenId);
         for (uint256 i = 0; i < nextTokenId; i++) {
@@ -987,11 +724,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return result;
     }
 
-    /**
-     * @dev Get the time-to-live (TTL) for a batch of tokens
-     * @param ids The IDs of the tokens
-     * @return result The TTL (in seconds) for each token in the batch
-     */
     function ttlOfBatch(
         uint256[] memory ids
     ) public view returns (uint256[] memory) {
@@ -1002,9 +734,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         return result;
     }
 
-    /**
-     * @dev Override to update token expiration data on mint, burn, and transfer
-     */
     function _update(
         address from,
         address to,
@@ -1036,13 +765,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         }
     }
 
-    /**
-     * @dev Insert (or update) a token group for a given account and token ID
-     * @param account The address of the account
-     * @param id The ID of the token
-     * @param amount The amount of tokens in the batch
-     * @param expiresAt The expiration timestamp of the batch
-     */
     function _upsertGroup(
         address account,
         uint256 id,
@@ -1082,12 +804,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
         groups[insertIndex] = Group({balance: amount, expiresAt: expiresAt});
     }
 
-    /**
-     * @dev Get a filtered array of token groups for a given account and token ID, without expired or empty groups
-     * @param account The address to check
-     * @param id The token ID to check
-     * @return Array of Group structs, with amount and expiration of each batch
-     */
     function _validGroups(
         address account,
         uint256 id
@@ -1126,10 +842,6 @@ abstract contract EVMAuthExpiringERC1155 is EVMAuthPurchasableERC1155 {
     }
 }
 
-/**
- * @title EVMAuth
- * @dev Implementation of EVMAuthExpiringERC1155 that provides a unified method for metadata management
- */
 contract EVMAuth is EVMAuthExpiringERC1155 {
     // Data structure for token metadata, including price and TTL
     struct TokenMetadata {
@@ -1149,14 +861,6 @@ contract EVMAuth is EVMAuthExpiringERC1155 {
         TokenMetadata newMetadata
     );
 
-    /**
-     * @dev Constructor
-     * @param name Name of the EIP-712 signing domain
-     * @param version Current major version of the EIP-712 signing domain
-     * @param uri URI for ERC-1155 token metadata
-     * @param delay Delay (in seconds) for transfer of contract ownership
-     * @param owner Address of the contract owner
-     */
     constructor(
         string memory name,
         string memory version,
@@ -1165,11 +869,6 @@ contract EVMAuth is EVMAuthExpiringERC1155 {
         address owner
     ) EVMAuthExpiringERC1155(name, version, uri, delay, owner) {}
 
-    /**
-     * @dev Get the metadata of a token
-     * @param id The ID of the token to check
-     * @return The metadata of the token, including price and TTL
-     */
     function metadataOf(uint256 id) public view returns (TokenMetadata memory) {
         // Retrieve the base token metadata
         BaseMetadata memory baseMetadata = baseMetadataOf(id);
@@ -1214,11 +913,6 @@ contract EVMAuth is EVMAuthExpiringERC1155 {
         return result;
     }
 
-    /**
-     * @dev Get the metadata of a batch of tokens
-     * @param ids The IDs of the tokens to check
-     * @return result The metadata of the tokens, including price and TTL
-     */
     function metadataOfBatch(
         uint256[] memory ids
     ) public view returns (TokenMetadata[] memory) {
@@ -1244,15 +938,6 @@ contract EVMAuth is EVMAuthExpiringERC1155 {
         return result;
     }
 
-    /**
-     * @dev Set comprehensive metadata for a token
-     * @param id The ID of the token
-     * @param _active Whether the token is active
-     * @param _burnable Whether the token is burnable
-     * @param _transferable Whether the token is transferable
-     * @param _price The price of the token (0 if not for sale)
-     * @param _ttl The time-to-live in seconds (0 for non-expiring)
-     */
     function setMetadata(
         uint256 id,
         bool _active,
@@ -1295,18 +980,6 @@ contract EVMAuth is EVMAuthExpiringERC1155 {
         }
     }
 
-    /**
-     * @dev Sets a new URI for all token types, by relying on the token ID substitution mechanism
-     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the ERC].
-     *
-     * By this mechanism, any occurrence of the `\{id\}` substring in either the URI or any of the values
-     * in the JSON file at said URI will be replaced by clients with the token ID.
-     *
-     * For example, the `https://token-cdn-domain/\{id\}.json` URI would be interpreted by clients as
-     * `https://token-cdn-domain/000000000000000000000000000000000000000000000000000000000004cce0.json`
-     * for token ID 0x4cce0.
-     * @param value The URI to set
-     */
     function setURI(string memory value) external {
         require(
             hasRole(TOKEN_MANAGER_ROLE, _msgSender()),
